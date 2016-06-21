@@ -1,5 +1,7 @@
 # -*- coding: UTF-8 -*-
 # __author__ = 'liuhc'
+import random
+import time
 
 
 class Question:
@@ -8,22 +10,22 @@ class Question:
         self.ID = ID
         self.description = description
         self.major = major
-        self.true_answer = true_answer
-        self.level_0_answer = level_0_answer
-        self.level_1_answer = level_1_answer
-        self.level_2_answer = level_2_answer
-
-    def display(self):
-        pass
+        self.true_ans = true_answer
+        self.false_ans = {"0": level_0_answer, "1": level_1_answer, "2": level_2_answer}
+        self.ans = []
 
 
 class Quiz:
-    def __init__(self, level):
+    def __init__(self, level, questions):
         self.level = level
+        if self.level not in [0, 1, 2]:
+            raise ValueError("level必须等于0、1、2这三个数其中之一！")
+        self.questions_dist = {"0": [40, 5, 5], "1": [5, 40, 5], "2": [5, 5, 40]}
         self.questions = []
         self.score = 0
-        self.nta = {"0": "A. ", "1": "B. ", "2": "C. ", "3": "D. "}
-        self.qs = []
+        self.nta = ["A", "B", "C", "D"]
+        self.qs = questions
+        self.wrong_ans = []
 
     def collect_questions(self):
         """先从有简单备选答案的题目中选题，
@@ -33,37 +35,81 @@ class Quiz:
            self.level=1（中等）：简单10%，中等80%，困难10%
            self.level=2（困难）：简单10%，中等10%，困难80%
         """
-        if self.level == 0:
-            level_0_questions = []
-            level_1_questions = []
-            level_2_questions = []
+        for level in range(3):
+            temp_questions_list = []
             for q in self.qs:
-                if q.level_0_ans:
-                    level_0_questions.append(q)
-            level_0_questions.random_choose(40)
-            for q in level_0_questions:
-                q.ans = list(q.true_ans) + q.level_0_questions
-
-            for q in self.qs:
-                if q.level_1_ans != False and q not in level_0_questions:
-                    level_1_questions.append(q)
-            level_1_questions.random_choose(5)
-            for q in level_1_questions:
-                q.ans = list(q.true_ans) + q.level_1_questions
-
-            for q in self.qs:
-                if q.level_2_ans != False and q not in level_0_questions and q not in level_1_questions:
-                    level_2_questions.append(q)
-            level_2_questions.random_choose(5)
-            for q in level_2_questions:
-                q.ans = list(q.true_ans) + q.level_2_questions
+                if q.false_ans[str(level)]:
+                    temp_questions_list.append(q)
+            temp_questions_list = random.sample(temp_questions_list, self.questions_dist[str(self.level)][level])
+            for q in temp_questions_list:
+                q.ans = list(q.true_ans) + q.false_ans[level]
+                random.shuffle(q.ans)
+            self.questions.extend(temp_questions_list)
+        random.shuffle(self.questions)
 
     def start_quiz(self):
-        for q in self.questions:
+        for q_i, q in enumerate(self.questions):
             print(q.description)
             for i, ans in enumerate(q.ans):
-                print(self.nta[str(i)], ans)
-            selection = input("请选择：  ")
-            selected_ans = [lambda i: self.nta[i] = selection]
+                print(self.nta[i], ans)
+            selection = input("请选择：  ").upper()
+            if selection not in self.nta:
+                raise ValueError("请输入字母A-D选择答案！")
+            selected_ans = self.nta.index(selection)
             if q.ans[selected_ans] == q.true_ans:
                 self.score += 2
+            else:
+                self.wrong_ans.append((q_i, q))
+        for i in range(4):
+            if i == 0:
+                print("正在改卷", end="")
+                time.sleep(1)
+            elif i != 3:
+                print(".", end="")
+                time.sleep(1)
+            else:
+                print(".")
+        self.show_result()
+
+    def show_result(self):
+        tips = {"0": {"0": [],
+                      "30": [],
+                      "60": [],
+                      "70": [],
+                      "80": [],
+                      "90": [],
+                      "95": [],
+                      "100": []},
+                "1": {"0": [],
+                      "30": [],
+                      "60": [],
+                      "70": [],
+                      "80": [],
+                      "90": [],
+                      "95": [],
+                      "100": []},
+                "2": {"0": [],
+                      "30": [],
+                      "60": [],
+                      "70": [],
+                      "80": [],
+                      "90": [],
+                      "95": [],
+                      "100": []}}
+        if self.score == 100:
+            tip = random.choice(tips[str(self.level)]["100"])
+        elif self.score >= 95:
+            tip = random.choice(tips[str(self.level)]["95"])
+        elif self.score >= 90:
+            tip = random.choice(tips[str(self.level)]["90"])
+        elif self.score >= 80:
+            tip = random.choice(tips[str(self.level)]["80"])
+        elif self.score >= 70:
+            tip = random.choice(tips[str(self.level)]["70"])
+        elif self.score >= 60:
+            tip = random.choice(tips[str(self.level)]["60"])
+        elif self.score >= 30:
+            tip = random.choice(tips[str(self.level)]["30"])
+        else:
+            tip = random.choice(tips[str(self.level)]["0"])
+        print(tip)
